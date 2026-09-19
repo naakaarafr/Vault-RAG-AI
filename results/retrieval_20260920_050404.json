@@ -1,0 +1,30 @@
+{
+  "timestamp": "20260920_050404",
+  "dataset_size": 5,
+  "configurations": {
+    "dense": {
+      "hit_at_1": 1.0,
+      "hit_at_5": 1.0,
+      "hit_at_10": 1.0,
+      "mrr": 1.0,
+      "p50_latency_ms": 18.675,
+      "p95_latency_ms": 7959.318
+    },
+    "hybrid": {
+      "hit_at_1": 1.0,
+      "hit_at_5": 1.0,
+      "hit_at_10": 1.0,
+      "mrr": 1.0,
+      "p50_latency_ms": 18.836,
+      "p95_latency_ms": 20.228
+    },
+    "hybrid_rerank": {
+      "hit_at_1": 1.0,
+      "hit_at_5": 1.0,
+      "hit_at_10": 1.0,
+      "mrr": 1.0,
+      "p50_latency_ms": 140.474,
+      "p95_latency_ms": 2684.814
+    }
+  }
+}

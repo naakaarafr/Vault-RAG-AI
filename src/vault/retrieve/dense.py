@@ -14,6 +14,17 @@ class DenseRetriever:
         vector_store: VectorStore | None = None,
         embedder: BaseEmbedder | None = None,
     ) -> None:
+        if vector_store is None:
+            try:
+                from pathlib import Path
+
+                from vault.config import get_settings
+
+                db_file = Path(get_settings().data_dir) / "vector_db.json"
+                if db_file.exists():
+                    vector_store = VectorStore(persistence_path=db_file)
+            except Exception:
+                pass
         self.vector_store = vector_store or VectorStore()
         self.embedder = embedder or SentenceTransformerEmbedder()
 

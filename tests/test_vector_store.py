@@ -85,3 +85,36 @@ def test_disk_persistence(tmp_path: Path) -> None:
     assert doc is not None
     assert doc.content == "Persisted content"
     assert doc.embedding == [0.5, 0.5]
+
+
+def test_dimension_mismatch_raises_valueerror() -> None:
+    """Verify ValueError is raised on vector dimension mismatch in non-test mode."""
+    import pytest
+
+    store = VectorStore()
+    doc = Document(
+        doc_id="d_3d",
+        content="3D embedding passage",
+        embedding=[1.0, 0.0, 0.0],
+    )
+    store.add_documents([doc])
+
+    # Query with 2D embedding vector [1.0, 0.0] against 3D document vector [1.0, 0.0, 0.0]
+    with pytest.raises(ValueError, match="Vector dimension mismatch for doc 'd_3d': expected 2, got 3."):
+        store.search(query_embedding=[1.0, 0.0], top_k=2)
+
+
+def test_dimension_mismatch_ignore_flag() -> None:
+    """Verify ignore_dimension_mismatch=True silently skips incompatible dimension documents."""
+    store = VectorStore()
+    docs = [
+        Document(doc_id="d_2d", content="2D vector", embedding=[1.0, 0.0]),
+        Document(doc_id="d_3d", content="3D vector", embedding=[1.0, 0.0, 0.0]),
+    ]
+    store.add_documents(docs)
+
+    # Search with 2D vector ignoring dimension mismatch
+    results = store.search(query_embedding=[1.0, 0.0], top_k=5, ignore_dimension_mismatch=True)
+    assert len(results) == 1
+    assert results[0].doc_id == "d_2d"
+

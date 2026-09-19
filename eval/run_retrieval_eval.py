@@ -52,6 +52,18 @@ def run_evaluation(dataset_path: str = "eval/dataset.jsonl") -> dict[str, Any]:
     # Initialize retrievers
     dense_retriever = DenseRetriever()
     bm25_retriever = BM25Retriever()
+
+    backend_class = dense_retriever.vector_store.__class__.__name__
+    doc_count = len(dense_retriever.vector_store.documents)
+    print(f"DenseRetriever backend class: {backend_class}")
+    print(f"Vector Store document/point count: {doc_count}")
+
+    if doc_count == 0:
+        raise RuntimeError(
+            f"Evaluation FAILED: Dense vector database via {backend_class} is empty (0 points/documents). "
+            f"Please run ingestion or ensure database persistence is initialized before evaluation."
+        )
+
     hybrid_retriever = HybridRetriever(
         dense_retriever=dense_retriever,
         bm25_retriever=bm25_retriever,

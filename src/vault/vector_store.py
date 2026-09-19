@@ -62,6 +62,7 @@ class VectorStore:
         query_embedding: list[float],
         top_k: int = 5,
         filter_metadata: dict[str, Any] | None = None,
+        ignore_dimension_mismatch: bool = False,
     ) -> list[SearchResult]:
         """Search top-k most similar documents using cosine similarity."""
         if not self.documents or not query_embedding:
@@ -70,10 +71,20 @@ class VectorStore:
         doc_list: list[Document] = []
         matrix_rows: list[list[float]] = []
 
-        # Filter by metadata if provided
+        target_dim = len(query_embedding)
+
+        # Filter by metadata if provided and validate dimension match
         for doc in self.documents.values():
             if not doc.embedding:
                 continue
+            doc_dim = len(doc.embedding)
+            if doc_dim != target_dim:
+                if ignore_dimension_mismatch:
+                    continue
+                raise ValueError(
+                    f"Vector dimension mismatch for doc '{doc.doc_id}': "
+                    f"expected {target_dim}, got {doc_dim}."
+                )
             if filter_metadata and not self._matches_filter(doc.metadata, filter_metadata):
                 continue
             doc_list.append(doc)
