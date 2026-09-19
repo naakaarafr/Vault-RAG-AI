@@ -9,7 +9,7 @@ from vault.config import Settings, get_settings
 from vault.embeddings import SentenceTransformerEmbedder
 from vault.ingest.chunker import IngestedChunk
 from vault.retrieval import BM25Retriever
-from vault.vector_store import Document, VectorStore
+from vault.vector_store import Document, VectorStore, get_vector_store
 
 
 class IngestionIndexer:
@@ -25,9 +25,7 @@ class IngestionIndexer:
         self.data_dir = Path(self.settings.data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
 
-        self.vector_store = vector_store or VectorStore(
-            persistence_path=self.data_dir / "vector_db.json"
-        )
+        self.vector_store = vector_store or get_vector_store()
         self.embedder = embedder or SentenceTransformerEmbedder(
             model_name=self.settings.embed_model
         )

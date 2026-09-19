@@ -1,5 +1,6 @@
 """Evaluation runner benchmarking dense, hybrid, and hybrid_rerank retrieval configurations."""
 
+import argparse
 import json
 import random
 import sys
@@ -41,7 +42,7 @@ def load_verified_dataset(dataset_path: str = "eval/dataset.jsonl") -> list[dict
     return dataset
 
 
-def run_evaluation(dataset_path: str = "eval/dataset.jsonl") -> dict[str, Any]:
+def run_evaluation(dataset_path: str = "eval/dataset.jsonl", is_smoke: bool = False) -> dict[str, Any]:
     """Execute end-to-end evaluation across dense, hybrid, and hybrid_rerank configurations."""
     set_seed(42)
     verified_items = load_verified_dataset(dataset_path)
@@ -49,20 +50,68 @@ def run_evaluation(dataset_path: str = "eval/dataset.jsonl") -> dict[str, Any]:
 
     print(f"Loaded {num_questions} verified evaluation questions from '{dataset_path}'.")
 
+    # (2) Fail if verified questions < 50 unless run with --smoke
+    if num_questions < 50 and not is_smoke:
+        raise RuntimeError(
+            f"Evaluation FAILED: Verified questions count ({num_questions}) is less than 50. "
+            f"Pass '--smoke' flag to allow evaluating small test sets."
+        )
+
     # Initialize retrievers
     dense_retriever = DenseRetriever()
     bm25_retriever = BM25Retriever()
 
     backend_class = dense_retriever.vector_store.__class__.__name__
-    doc_count = len(dense_retriever.vector_store.documents)
-    print(f"DenseRetriever backend class: {backend_class}")
-    print(f"Vector Store document/point count: {doc_count}")
+    chunks = dense_retriever.vector_store.documents
+    chunk_count = len(chunks)
+    
+    # Calculate unique doc_ids from metadata or documents
+    unique_doc_ids = set()
+    indexed_doc_ids = set()
+    
+    if isinstance(chunks, dict):
+        chunk_items = list(chunks.values())
+    else:
+        chunk_items = list(chunks)
 
-    if doc_count == 0:
+    for doc in chunk_items:
+        if isinstance(doc, dict):
+            doc_id = doc.get("doc_id") or doc.get("metadata", {}).get("doc_id")
+        else:
+            doc_id = getattr(doc, "doc_id", None) or getattr(doc, "metadata", {}).get("doc_id", None)
+            if hasattr(doc, "metadata") and doc.metadata:
+                doc_id = doc.metadata.get("doc_id", doc_id)
+
+        if doc_id:
+            unique_doc_ids.add(str(doc_id))
+            indexed_doc_ids.add(str(doc_id))
+
+    doc_count = len(unique_doc_ids)
+
+    print(f"DenseRetriever backend class: {backend_class}")
+    # (3) Print chunk count and doc count
+    print(f"Vector Store chunk count: {chunk_count}")
+    print(f"Vector Store unique document count: {doc_count}")
+
+    if chunk_count == 0:
         raise RuntimeError(
-            f"Evaluation FAILED: Dense vector database via {backend_class} is empty (0 points/documents). "
+            f"Evaluation FAILED: Dense vector database via {backend_class} is empty (0 points/chunks). "
             f"Please run ingestion or ensure database persistence is initialized before evaluation."
         )
+
+    # (1) Verify every gold_doc_id in eval/dataset.jsonl exists in the index
+    missing_gold_docs = set()
+    for item in verified_items:
+        for gold_id in item.get("gold_doc_ids", []):
+            if str(gold_id) not in indexed_doc_ids:
+                missing_gold_docs.add(str(gold_id))
+
+    if missing_gold_docs:
+        raise RuntimeError(
+            f"Evaluation FAILED: The following gold_doc_ids in evaluation dataset do NOT exist in the index: "
+            f"{sorted(list(missing_gold_docs))}"
+        )
+
 
     hybrid_retriever = HybridRetriever(
         dense_retriever=dense_retriever,
@@ -108,6 +157,9 @@ def run_evaluation(dataset_path: str = "eval/dataset.jsonl") -> dict[str, Any]:
                 hits_at_10.append(hit_at_k(retrieved_ids, gold_doc_ids, k=10))
                 mrr_scores.append(mrr(retrieved_ids, gold_doc_ids))
 
+        # (4) Discard first 5 queries as warmup for latency statistics
+        warm_latencies_ms = latencies_ms[5:] if len(latencies_ms) > 5 else latencies_ms
+
         # Aggregate metrics
         count_ans = len(hits_at_1) if hits_at_1 else 1
         avg_hit1 = sum(hits_at_1) / count_ans
@@ -120,8 +172,8 @@ def run_evaluation(dataset_path: str = "eval/dataset.jsonl") -> dict[str, Any]:
             "hit_at_5": round(avg_hit5, 4),
             "hit_at_10": round(avg_hit10, 4),
             "mrr": round(avg_mrr, 4),
-            "p50_latency_ms": round(percentile(latencies_ms, 50), 3),
-            "p95_latency_ms": round(percentile(latencies_ms, 95), 3),
+            "p50_latency_ms": round(percentile(warm_latencies_ms, 50), 3),
+            "p95_latency_ms": round(percentile(warm_latencies_ms, 95), 3),
         }
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -181,5 +233,10 @@ def generate_markdown_report(payload: dict[str, Any]) -> str:
 
 
 if __name__ == "__main__":
-    dataset_file = sys.argv[1] if len(sys.argv) > 1 else "eval/dataset.jsonl"
-    run_evaluation(dataset_file)
+    parser = argparse.ArgumentParser(description="Retrieval Evaluation Benchmark")
+    parser.add_argument("dataset_file", nargs="?", default="eval/dataset.jsonl", help="Path to evaluation dataset")
+    parser.add_argument("--smoke", action="store_true", help="Allow running evaluation on datasets with < 50 questions")
+    args = parser.parse_args()
+
+    run_evaluation(dataset_path=args.dataset_file, is_smoke=args.smoke)
+

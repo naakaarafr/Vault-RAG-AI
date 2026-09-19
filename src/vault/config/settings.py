@@ -45,6 +45,10 @@ class Settings(BaseSettings):
     )
 
     # Infrastructure Services & Storage
+    vector_backend: Literal["qdrant", "embedded"] = Field(
+        default="embedded",
+        description="Vector storage backend engine choice ('qdrant' or 'embedded')",
+    )
     qdrant_url: str = Field(
         default="http://localhost:6333",
         description="Local Qdrant vector database URL",

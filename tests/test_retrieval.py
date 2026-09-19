@@ -93,3 +93,55 @@ def test_self_retrieval_regression_across_all_retrievers() -> None:
     assert len(hybrid_hits) >= 1
     assert hybrid_hits[0].doc_id == "self_1"
 
+
+def test_self_retrieval_against_real_ingested_index() -> None:
+    """Verify self-retrieval across Dense, BM25, and Hybrid retrievers against real ingested index chunks."""
+    dense = DenseRetriever()
+    bm25 = BM25Retriever()
+    hybrid = HybridRetriever(dense_retriever=dense, bm25_retriever=bm25)
+
+    docs = dense.vector_store.documents
+    assert len(docs) > 0, "Ingested vector store is empty; run ingestion first."
+
+    # Sample up to 3 real ingested chunks
+    if isinstance(docs, dict):
+        doc_items = list(docs.values())
+    else:
+        doc_items = list(docs)
+
+    sample_docs = doc_items[:3]
+
+    for doc_item in sample_docs:
+        if isinstance(doc_item, dict):
+            content = doc_item.get("text", "")
+            doc_id = doc_item.get("doc_id") or doc_item.get("metadata", {}).get("doc_id")
+            roles = doc_item.get("allowed_roles") or ["public", "admin"]
+        else:
+            content = getattr(doc_item, "content", "")
+            doc_id = getattr(doc_item, "doc_id", None) or getattr(doc_item, "metadata", {}).get("doc_id")
+            roles = getattr(doc_item, "metadata", {}).get("allowed_roles", ["public", "admin"])
+
+        if not content or not doc_id:
+            continue
+
+        # 1. Real Dense self-retrieval
+        dense_hits = dense.search(query=content[:200], k=5, roles=roles)
+        assert len(dense_hits) >= 1
+        retrieved_ids = [h.chunk_id for h in dense_hits] + [h.doc_id for h in dense_hits]
+        assert doc_id in retrieved_ids or getattr(doc_item, "doc_id", None) in retrieved_ids
+
+        # 2. Real BM25 self-retrieval
+        bm25_hits = bm25.search(query=content[:200], k=5, roles=roles)
+        assert len(bm25_hits) >= 1
+        retrieved_bm25_ids = [h.chunk_id for h in bm25_hits] + [h.doc_id for h in bm25_hits]
+        assert doc_id in retrieved_bm25_ids or getattr(doc_item, "doc_id", None) in retrieved_bm25_ids
+
+        # 3. Real Hybrid self-retrieval
+        hybrid_hits = hybrid.search(query=content[:200], k=5, roles=roles)
+        assert len(hybrid_hits) >= 1
+        retrieved_hybrid_ids = [h.chunk_id for h in hybrid_hits] + [h.doc_id for h in hybrid_hits]
+        assert doc_id in retrieved_hybrid_ids or getattr(doc_item, "doc_id", None) in retrieved_hybrid_ids
+
+
+
+

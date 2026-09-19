@@ -149,3 +149,166 @@ class VectorStore:
         with open(self.persistence_path, encoding="utf-8") as f:
             data = json.load(f)
         self.documents = {item["doc_id"]: Document(**item) for item in data}
+
+
+class QdrantVectorStore:
+    """Vector database backend wrapping Qdrant server via qdrant-client with RBAC payload filtering."""
+
+    def __init__(
+        self,
+        url: str | None = None,
+        collection_name: str = "vault_chunks",
+        vector_size: int = 384,
+    ) -> None:
+        from qdrant_client import QdrantClient
+        from qdrant_client.models import Distance, VectorParams
+        from vault.config import get_settings
+
+        settings = get_settings()
+        self.url = url or settings.qdrant_url
+        self.collection_name = collection_name
+        self.vector_size = vector_size
+        self.client = QdrantClient(url=self.url)
+
+        # Initialize collection if not exists
+        try:
+            collections = [c.name for c in self.client.get_collections().collections]
+            if self.collection_name not in collections:
+                self.client.create_collection(
+                    collection_name=self.collection_name,
+                    vectors_config=VectorParams(size=self.vector_size, distance=Distance.COSINE),
+                )
+        except Exception as err:
+            raise RuntimeError(f"Failed to connect to Qdrant at '{self.url}': {err}") from err
+
+    @property
+    def documents(self) -> dict[str, Document]:
+        """Expose stored points as documents dictionary for interface compatibility."""
+        from qdrant_client.models import FieldCondition, Filter, MatchValue
+        res: dict[str, Document] = {}
+        try:
+            points, _ = self.client.scroll(
+                collection_name=self.collection_name,
+                limit=10000,
+                with_payload=True,
+                with_vectors=True,
+            )
+            for pt in points:
+                payload = pt.payload or {}
+                emb = pt.vector if isinstance(pt.vector, list) else []
+                res[str(pt.id)] = Document(
+                    doc_id=str(pt.id),
+                    content=payload.get("text", ""),
+                    metadata=payload,
+                    embedding=emb,
+                )
+        except Exception:
+            pass
+        return res
+
+    def add_documents(self, docs: list[Document]) -> None:
+        """Upsert Document objects as points with payload into Qdrant."""
+        from qdrant_client.models import PointStruct
+
+        points: list[PointStruct] = []
+        for doc in docs:
+            payload = dict(doc.metadata)
+            payload["text"] = doc.content
+            payload["doc_id"] = doc.metadata.get("doc_id", doc.doc_id)
+            payload["chunk_id"] = doc.doc_id
+            payload["page"] = doc.metadata.get("page", 1)
+            payload["allowed_roles"] = doc.metadata.get("allowed_roles", ["public"])
+
+            # Use hash of doc_id if string is non-numeric, or str format
+            import uuid
+            point_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, doc.doc_id))
+
+            points.append(
+                PointStruct(
+                    id=point_id,
+                    vector=doc.embedding,
+                    payload=payload,
+                )
+            )
+
+        if points:
+            self.client.upsert(collection_name=self.collection_name, points=points)
+
+    def get_document(self, doc_id: str) -> Document | None:
+        """Retrieve point by document/chunk ID."""
+        docs = self.documents
+        return docs.get(doc_id)
+
+    def delete_document(self, doc_id: str) -> bool:
+        """Delete point from Qdrant by document/chunk ID."""
+        import uuid
+        point_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, doc_id))
+        try:
+            self.client.delete(
+                collection_name=self.collection_name,
+                points_selector=[point_id],
+            )
+            return True
+        except Exception:
+            return False
+
+    def search(
+        self,
+        query_embedding: list[float],
+        top_k: int = 5,
+        filter_metadata: dict[str, Any] | None = None,
+        roles: list[str] | None = None,
+        ignore_dimension_mismatch: bool = False,
+    ) -> list[SearchResult]:
+        """Search Qdrant collection with vector similarity and RBAC payload filter."""
+        from qdrant_client.models import FieldCondition, Filter, MatchValue
+
+        conditions = []
+        if filter_metadata:
+            for k, v in filter_metadata.items():
+                conditions.append(FieldCondition(key=k, match=MatchValue(value=v)))
+
+        # RBAC Payload Filter: Match allowed_roles payload
+        if roles:
+            role_conditions = [
+                FieldCondition(key="allowed_roles", match=MatchValue(value=role))
+                for role in roles
+            ]
+            qdrant_filter = Filter(must=conditions, should=role_conditions)
+        else:
+            qdrant_filter = Filter(must=conditions) if conditions else None
+
+        search_results = self.client.search(
+            collection_name=self.collection_name,
+            query_vector=query_embedding,
+            limit=top_k,
+            query_filter=qdrant_filter,
+        )
+
+        results: list[SearchResult] = []
+        for hit in search_results:
+            payload = hit.payload or {}
+            results.append(
+                SearchResult(
+                    doc_id=payload.get("chunk_id", str(hit.id)),
+                    content=payload.get("text", ""),
+                    metadata=payload,
+                    score=float(hit.score),
+                )
+            )
+        return results
+
+
+def get_vector_store(backend: str | None = None) -> VectorStore | QdrantVectorStore:
+    """Factory creating vector store backend based on config settings or backend argument."""
+    from vault.config import get_settings
+    settings = get_settings()
+    active_backend = backend or settings.vector_backend
+
+    if active_backend == "qdrant":
+        return QdrantVectorStore()
+    
+    persistence_file = Path(settings.data_dir) / "vector_store.json"
+    return VectorStore(persistence_path=persistence_file)
+
+
