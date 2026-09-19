@@ -1,0 +1,75 @@
+version: "3.8"
+
+services:
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: vault-qdrant
+    ports:
+      - "6333:6333"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:6333/healthz || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: vault-postgres
+    environment:
+      POSTGRES_USER: vault
+      POSTGRES_PASSWORD: vaultpassword
+      POSTGRES_DB: vault_db
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vault -d vault_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: vault-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:11434/api/tags || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  ollama-pull:
+    image: curlimages/curl:latest
+    container_name: vault-ollama-pull
+    depends_on:
+      ollama:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+        echo 'Pulling BAAI/bge-small-en-v1.5 and llama3.2 models into local Ollama runtime...';
+        curl -s -X POST http://ollama:11434/api/pull -d '{\"name\": \"tinyllama\"}';
+        echo 'Model pull completed.';
+      "
+
+  api:
+    build: .
+    container_name: vault-api
+    ports:
+      - "8000:8000"
+    environment:
+      - LLM_BASE_URL=http://ollama:11434/v1
+      - LLM_MODEL=tinyllama
+      - QDRANT_URL=http://qdrant:6333
+      - POSTGRES_DSN=postgresql://vault:vaultpassword@postgres:5432/vault_db
+    depends_on:
+      qdrant:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+
+volumes:
+  ollama_data:

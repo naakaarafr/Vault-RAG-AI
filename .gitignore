@@ -1,0 +1,19 @@
+# Vault Environment & Data Ignores
+.env
+.chroma/
+data/
+results/*.tmp
+
+# Python & Build Ignores
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+.venv/
+env/
+venv/

@@ -1,0 +1,5 @@
+{"qid": "Q001", "question": "What local encryption algorithm is used by Vault memory buffers?", "gold_doc_ids": ["DOC_001"], "gold_answer": "AES-256 local encryption", "answerable": true, "verified": true}
+{"qid": "Q002", "question": "What retrieval algorithms are combined using Reciprocal Rank Fusion?", "gold_doc_ids": ["DOC_001"], "gold_answer": "Dense vector similarity and BM25 term frequency-idf ranking", "answerable": true, "verified": true}
+{"qid": "Q003", "question": "What is the value of parameter k in Vault Reciprocal Rank Fusion?", "gold_doc_ids": ["DOC_001"], "gold_answer": "60", "answerable": true, "verified": true}
+{"qid": "Q004", "question": "What PII types are scrubbed by Vault input guardrails?", "gold_doc_ids": ["DOC_001"], "gold_answer": "Emails, SSNs, credit card numbers, and API keys", "answerable": true, "verified": true}
+{"qid": "Q005", "question": "What cloud provider hosts Vault external API endpoints?", "gold_doc_ids": [], "gold_answer": "N/A - Vault is fully self-hosted with zero external network calls.", "answerable": false, "verified": true}

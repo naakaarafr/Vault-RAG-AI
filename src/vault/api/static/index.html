@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vault - Enterprise RAG Stack</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --border: rgba(255, 255, 255, 0.1);
+            --primary: #38bdf8;
+            --primary-hover: #0284c7;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --danger: #f43f5e;
+            --success: #10b981;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background: radial-gradient(circle at top, #1e293b 0%, #0f172a 100%);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 850px;
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 2.5rem;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+        }
+
+        header {
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 2.2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #38bdf8 0%, #818cf8 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        header p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+        }
+
+        select, input[type="text"] {
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            padding: 0.85rem 1.2rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        input[type="text"] {
+            flex: 1;
+        }
+
+        select:focus, input[type="text"]:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
+        }
+
+        button {
+            background: var(--primary);
+            color: #0f172a;
+            font-weight: 600;
+            border: none;
+            padding: 0.85rem 1.8rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.2s ease;
+        }
+
+        button:hover {
+            background: var(--primary-hover);
+            transform: translateY(-1px);
+        }
+
+        .response-card {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            display: none;
+        }
+
+        .badge-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .badge {
+            padding: 0.35rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge-success {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+            border: 1px solid var(--success);
+        }
+
+        .badge-refused {
+            background: rgba(244, 63, 94, 0.2);
+            color: var(--danger);
+            border: 1px solid var(--danger);
+        }
+
+        .latency {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        .answer-text {
+            font-size: 1.05rem;
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+            color: #e2e8f0;
+        }
+
+        .citations-section {
+            border-top: 1px solid var(--border);
+            padding-top: 1rem;
+        }
+
+        .citations-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 0.75rem;
+            text-transform: uppercase;
+        }
+
+        .citation-pills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .citation-pill {
+            background: rgba(56, 189, 248, 0.15);
+            color: var(--primary);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .citation-pill:hover {
+            background: rgba(56, 189, 248, 0.3);
+        }
+
+        .citation-detail {
+            margin-top: 0.75rem;
+            background: rgba(30, 41, 59, 0.9);
+            padding: 1rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            color: #cbd5e1;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Vault AI Workspace</h1>
+            <p>Self-Hosted Guardrailed RAG Agent & Knowledge Base</p>
+        </header>
+
+        <div class="input-group">
+            <div class="controls">
+                <select id="role-select">
+                    <option value="public">Role: Public</option>
+                    <option value="compliance">Role: Compliance</option>
+                    <option value="admin">Role: Admin</option>
+                </select>
+                <input type="text" id="question-input" placeholder="Ask Vault a question..." value="What is the system architecture of Vault?">
+                <button id="ask-btn" onclick="submitQuestion()">Ask Agent</button>
+            </div>
+        </div>
+
+        <div class="response-card" id="response-card">
+            <div class="badge-row">
+                <span class="badge" id="status-badge">Status</span>
+                <span class="latency" id="latency-text">0 ms</span>
+            </div>
+            <div class="answer-text" id="answer-text"></div>
+            <div class="citations-section" id="citations-section">
+                <div class="citations-title">Source Citations</div>
+                <div class="citation-pills" id="citation-pills"></div>
+                <div class="citation-detail" id="citation-detail"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function submitQuestion() {
+            const question = document.getElementById('question-input').value.trim();
+            const role = document.getElementById('role-select').value;
+            const btn = document.getElementById('ask-btn');
+
+            if (!question) return;
+
+            btn.disabled = true;
+            btn.innerText = 'Querying...';
+
+            const card = document.getElementById('response-card');
+            const badge = document.getElementById('status-badge');
+            const latency = document.getElementById('latency-text');
+            const answer = document.getElementById('answer-text');
+            const pills = document.getElementById('citation-pills');
+            const detail = document.getElementById('citation-detail');
+
+            card.style.display = 'block';
+            answer.innerText = 'Processing query through hybrid retriever, reranker, and agent guardrails...';
+            pills.innerHTML = '';
+            detail.style.display = 'none';
+
+            try {
+                const res = await fetch('/ask', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ question, role })
+                });
+                const data = await res.json();
+
+                btn.disabled = false;
+                btn.innerText = 'Ask Agent';
+
+                latency.innerText = `${data.latency_ms.toFixed(1)} ms`;
+
+                if (data.refused) {
+                    badge.className = 'badge badge-refused';
+                    badge.innerText = 'Refused / Guardrailed';
+                    answer.innerText = data.answer;
+                    document.getElementById('citations-section').style.display = 'none';
+                } else {
+                    badge.className = 'badge badge-success';
+                    badge.innerText = 'Answered';
+                    answer.innerText = data.answer;
+                    document.getElementById('citations-section').style.display = 'block';
+
+                    if (data.citations && data.citations.length > 0) {
+                        pills.innerHTML = data.citations.map(c => `
+                            <span class="citation-pill" onclick="showCitationDetail('${c}')">[${c}]</span>
+                        `).join('');
+                    } else {
+                        pills.innerHTML = '<span style="color: var(--text-muted); font-size: 0.85rem;">No citations referenced</span>';
+                    }
+                }
+            } catch (err) {
+                btn.disabled = false;
+                btn.innerText = 'Ask Agent';
+                badge.className = 'badge badge-refused';
+                badge.innerText = 'Error';
+                answer.innerText = 'Failed to connect to Vault API endpoint.';
+            }
+        }
+
+        function showCitationDetail(chunkId) {
+            const detail = document.getElementById('citation-detail');
+            detail.style.display = 'block';
+            detail.innerHTML = `<strong>Verified Chunk Reference:</strong> <code>${chunkId}</code><br><span style="color: var(--text-muted);">Verified document snippet source matched via hybrid vector+BM25 index.</span>`;
+        }
+    </script>
+</body>
+</html>

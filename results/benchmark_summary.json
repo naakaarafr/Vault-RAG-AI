@@ -1,0 +1,20 @@
+{
+  "dataset": {
+    "num_source_documents": 3,
+    "total_chunks_created": 5
+  },
+  "ingestion": {
+    "total_ingestion_time_ms": 0.302,
+    "avg_time_per_chunk_ms": 0.06
+  },
+  "retrieval_latency": {
+    "avg_dense_vector_search_latency_ms": 0.148,
+    "avg_hybrid_rrf_search_latency_ms": 0.153,
+    "num_benchmark_queries": 3
+  },
+  "environment": {
+    "python_version": "3.11",
+    "vector_dimension": 384,
+    "offline_mode": true
+  }
+}

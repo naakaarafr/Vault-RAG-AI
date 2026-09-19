@@ -1,0 +1,64 @@
+{
+  "timestamp": "2026-09-19T22:50:01Z",
+  "threshold": 0.002,
+  "total_questions": 5,
+  "unanswerable_count": 1,
+  "answerable_count": 4,
+  "metrics": {
+    "refusal_precision": 0.0,
+    "refusal_recall": 0.0,
+    "refusal_f1": 0.0,
+    "overall_accuracy": 0.2
+  },
+  "details": [
+    {
+      "qid": "Q001",
+      "question": "What local encryption algorithm is used by Vault memory buffers?",
+      "answerable": true,
+      "refused": false,
+      "refusal_reason": null,
+      "best_rerank_score": 0.7938292026519775,
+      "citations": [
+        "DOC_001_p1_c0"
+      ]
+    },
+    {
+      "qid": "Q002",
+      "question": "What retrieval algorithms are combined using Reciprocal Rank Fusion?",
+      "answerable": true,
+      "refused": true,
+      "refusal_reason": "Low-confidence retrieval score below threshold.",
+      "best_rerank_score": 8.573567902203649e-05,
+      "citations": []
+    },
+    {
+      "qid": "Q003",
+      "question": "What is the value of parameter k in Vault Reciprocal Rank Fusion?",
+      "answerable": true,
+      "refused": true,
+      "refusal_reason": "Low-confidence retrieval score below threshold.",
+      "best_rerank_score": 0.00040188769344240427,
+      "citations": []
+    },
+    {
+      "qid": "Q004",
+      "question": "What PII types are scrubbed by Vault input guardrails?",
+      "answerable": true,
+      "refused": true,
+      "refusal_reason": "Low-confidence retrieval score below threshold.",
+      "best_rerank_score": 9.12014875211753e-05,
+      "citations": []
+    },
+    {
+      "qid": "Q005",
+      "question": "What cloud provider hosts Vault external API endpoints?",
+      "answerable": false,
+      "refused": false,
+      "refusal_reason": null,
+      "best_rerank_score": 0.003883878467604518,
+      "citations": [
+        "DOC_001_p1_c0"
+      ]
+    }
+  ]
+}

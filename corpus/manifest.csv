@@ -1,0 +1,2 @@
+doc_id,title,source_url,allowed_roles,file_path
+DOC_001,Vault Compliance Policy,,public;compliance;admin,corpus/sample_policy.docx
