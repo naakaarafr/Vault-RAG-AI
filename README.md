@@ -32,7 +32,9 @@ graph TD
     RRF --> Reranker
     Reranker -->|Top-K Hits| P4
     P4 -->|Context| LLM[Local Ollama / vLLM Server]
+    LLM -->|On Failure| Fallback[OpenAI Fallback Model: gpt-4o-mini]
     LLM -->|Response| P5
+    Fallback -->|Response| P5
     P5 --> P2
     P2 -->|Final Output| API
 ```
@@ -55,10 +57,23 @@ curl http://localhost:8000/health
 
 ---
 
-## Fully-Local Guarantee
+## Fully-Local & High-Availability Model Support
 
-- **Zero Hosted API Calls**: No OpenAI, Anthropic, or Pinecone external calls. All embeddings (`BAAI/bge-small-en-v1.5`) and LLM chat completions run against local Ollama or vLLM endpoints.
-- **Privacy Isolation**: Document contents, embeddings, and chat histories never leave your hardware.
+- **Primary Local LLM**: All embeddings (`BAAI/bge-small-en-v1.5`) and default LLM chat completions run locally against Ollama or vLLM endpoints.
+- **OpenAI Model Fallback**: If the local LLM server is offline or fails to respond, `LLMClient` seamlessly falls back to an OpenAI model (e.g., `gpt-4o-mini`) when `ENABLE_OPENAI_FALLBACK=true` and `OPENAI_API_KEY` is provided.
+- **Privacy & Resilience**: Ensures system uptime and high availability without compromising guardrail checks.
+
+### OpenAI Fallback Configuration
+
+Set the following environment variables in `.env`:
+
+```env
+OPENAI_API_KEY=your-api-key-here
+OPENAI_MODEL=gpt-4o-mini
+OPENAI_BASE_URL=https://api.openai.com/v1
+ENABLE_OPENAI_FALLBACK=true
+```
+
 
 ---
 
