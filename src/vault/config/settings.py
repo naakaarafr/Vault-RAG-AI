@@ -34,6 +34,24 @@ class Settings(BaseSettings):
         description="Maximum number of HTTP retries on LLM server failure",
     )
 
+    # OpenAI Fallback Model Configuration
+    openai_api_key: str | None = Field(
+        default=None,
+        description="OpenAI API key for fallback OpenAI model calls",
+    )
+    openai_model: str = Field(
+        default="gpt-4o-mini",
+        description="OpenAI model name to use when primary local LLM fails",
+    )
+    openai_base_url: str = Field(
+        default="https://api.openai.com/v1",
+        description="Base URL for OpenAI API fallback endpoint",
+    )
+    enable_openai_fallback: bool = Field(
+        default=True,
+        description="Whether to fall back to OpenAI model if primary local LLM call fails",
+    )
+
     # Models Configuration
     embed_model: str = Field(
         default="BAAI/bge-small-en-v1.5",

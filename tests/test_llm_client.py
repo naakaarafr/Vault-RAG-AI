@@ -89,3 +89,90 @@ async def test_generate_async_mocked(
 
     result = await client.generate_async(messages=[{"role": "user", "content": "Hello"}])
     assert result == "Async response from local Ollama/vLLM"
+
+
+def test_generate_sync_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Verify primary model failure triggers fallback to OpenAI model synchronously."""
+    settings = Settings(
+        llm_base_url="http://localhost:11434/v1",
+        llm_model="llama3:8b",
+        openai_api_key="sk-test-key",
+        openai_model="gpt-4o-mini",
+        enable_openai_fallback=True,
+    )
+    client = LLMClient(settings=settings)
+
+    def mock_primary_fail(**kwargs):
+        raise ConnectionError("Local vLLM server unreachable")
+
+    mock_choice = MagicMock()
+    mock_choice.message.content = "Response from OpenAI fallback model"
+    mock_completion = MagicMock()
+    mock_completion.choices = [mock_choice]
+
+    fallback_called = {}
+
+    def mock_fallback_success(**kwargs):
+        fallback_called["model"] = kwargs.get("model")
+        return mock_completion
+
+    monkeypatch.setattr(client.sync_client.chat.completions, "create", mock_primary_fail)
+    monkeypatch.setattr(client.fallback_sync_client.chat.completions, "create", mock_fallback_success)
+
+    result = client.generate(messages=[{"role": "user", "content": "Hello"}])
+    assert result == "Response from OpenAI fallback model"
+    assert fallback_called.get("model") == "gpt-4o-mini"
+
+
+@pytest.mark.anyio
+async def test_generate_async_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Verify primary model failure triggers fallback to OpenAI model asynchronously."""
+    settings = Settings(
+        llm_base_url="http://localhost:11434/v1",
+        llm_model="llama3:8b",
+        openai_api_key="sk-test-key",
+        openai_model="gpt-4o-mini",
+        enable_openai_fallback=True,
+    )
+    client = LLMClient(settings=settings)
+
+    async def mock_primary_fail(**kwargs):
+        raise ConnectionError("Local vLLM server unreachable")
+
+    mock_choice = MagicMock()
+    mock_choice.message.content = "Async response from OpenAI fallback model"
+    mock_completion = MagicMock()
+    mock_completion.choices = [mock_choice]
+
+    fallback_called = {}
+
+    async def mock_fallback_success(**kwargs):
+        fallback_called["model"] = kwargs.get("model")
+        return mock_completion
+
+    monkeypatch.setattr(client.async_client.chat.completions, "create", mock_primary_fail)
+    monkeypatch.setattr(client.fallback_async_client.chat.completions, "create", mock_fallback_success)
+
+    result = await client.generate_async(messages=[{"role": "user", "content": "Hello"}])
+    assert result == "Async response from OpenAI fallback model"
+    assert fallback_called.get("model") == "gpt-4o-mini"
+
+
+def test_generate_fallback_disabled(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Verify primary model failure raises exception when fallback is disabled."""
+    settings = Settings(
+        llm_base_url="http://localhost:11434/v1",
+        llm_model="llama3:8b",
+        openai_api_key="sk-test-key",
+        enable_openai_fallback=False,
+    )
+    client = LLMClient(settings=settings)
+
+    def mock_primary_fail(**kwargs):
+        raise ConnectionError("Local vLLM server unreachable")
+
+    monkeypatch.setattr(client.sync_client.chat.completions, "create", mock_primary_fail)
+
+    with pytest.raises(ConnectionError, match="Local vLLM server unreachable"):
+        client.generate(messages=[{"role": "user", "content": "Hello"}])
+

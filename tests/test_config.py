@@ -12,6 +12,9 @@ def test_default_settings() -> None:
     assert isinstance(settings.llm_timeout_seconds, float)
     assert settings.llm_max_retries > 0
     assert isinstance(settings.enable_input_guardrails, bool)
+    assert settings.openai_model == "gpt-4o-mini"
+    assert settings.enable_openai_fallback is True
+
 
 
 def test_custom_settings_override(monkeypatch: pytest.MonkeyPatch) -> None:
