@@ -124,12 +124,25 @@ def run_evaluation(dataset_path: str = "eval/dataset.jsonl", is_smoke: bool = Fa
 
     for config_name in configs:
         print(f"\nEvaluating configuration: [{config_name}]...")
+
+        # Run 5 throwaway warmup queries per config BEFORE timing
+        warmup_query = verified_items[0]["question"] if verified_items else "warmup query"
+        for _ in range(5):
+            if config_name == "dense":
+                _ = dense_retriever.search(query=warmup_query, k=10, roles=["public", "admin"])
+            elif config_name == "hybrid":
+                _ = hybrid_retriever.search(query=warmup_query, k=10, roles=["public", "admin"])
+            elif config_name == "hybrid_rerank":
+                cands = hybrid_retriever.search(query=warmup_query, k=30, roles=["public", "admin"])
+                _ = reranker.rerank(query=warmup_query, hits=cands, top_k=10)
+
         hits_at_1: list[float] = []
         hits_at_5: list[float] = []
         hits_at_10: list[float] = []
         mrr_scores: list[float] = []
         latencies_ms: list[float] = []
 
+        # Time ALL evaluation questions
         for item in verified_items:
             question = item["question"]
             gold_doc_ids = item.get("gold_doc_ids", [])
@@ -157,10 +170,7 @@ def run_evaluation(dataset_path: str = "eval/dataset.jsonl", is_smoke: bool = Fa
                 hits_at_10.append(hit_at_k(retrieved_ids, gold_doc_ids, k=10))
                 mrr_scores.append(mrr(retrieved_ids, gold_doc_ids))
 
-        # (4) Discard first 5 queries as warmup for latency statistics
-        warm_latencies_ms = latencies_ms[5:] if len(latencies_ms) > 5 else latencies_ms
-
-        # Aggregate metrics
+        # Aggregate metrics over timed queries
         count_ans = len(hits_at_1) if hits_at_1 else 1
         avg_hit1 = sum(hits_at_1) / count_ans
         avg_hit5 = sum(hits_at_5) / count_ans
@@ -172,9 +182,10 @@ def run_evaluation(dataset_path: str = "eval/dataset.jsonl", is_smoke: bool = Fa
             "hit_at_5": round(avg_hit5, 4),
             "hit_at_10": round(avg_hit10, 4),
             "mrr": round(avg_mrr, 4),
-            "p50_latency_ms": round(percentile(warm_latencies_ms, 50), 3),
-            "p95_latency_ms": round(percentile(warm_latencies_ms, 95), 3),
+            "p50_latency_ms": round(percentile(latencies_ms, 50), 3),
+            "p95_latency_ms": round(percentile(latencies_ms, 95), 3),
         }
+
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     results_dir = Path("results")

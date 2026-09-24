@@ -114,33 +114,35 @@ def test_self_retrieval_against_real_ingested_index() -> None:
     for doc_item in sample_docs:
         if isinstance(doc_item, dict):
             content = doc_item.get("text", "")
-            doc_id = doc_item.get("doc_id") or doc_item.get("metadata", {}).get("doc_id")
+            target_id = doc_item.get("chunk_id") or doc_item.get("doc_id") or doc_item.get("metadata", {}).get("chunk_id")
             roles = doc_item.get("allowed_roles") or ["public", "admin"]
         else:
             content = getattr(doc_item, "content", "")
-            doc_id = getattr(doc_item, "doc_id", None) or getattr(doc_item, "metadata", {}).get("doc_id")
-            roles = getattr(doc_item, "metadata", {}).get("allowed_roles", ["public", "admin"])
+            metadata = getattr(doc_item, "metadata", {}) or {}
+            target_id = metadata.get("chunk_id") or metadata.get("doc_id") or getattr(doc_item, "doc_id", None)
+            roles = metadata.get("allowed_roles", ["public", "admin"])
 
-        if not content or not doc_id:
+        if not content or not target_id:
             continue
 
         # 1. Real Dense self-retrieval
         dense_hits = dense.search(query=content[:200], k=5, roles=roles)
         assert len(dense_hits) >= 1
         retrieved_ids = [h.chunk_id for h in dense_hits] + [h.doc_id for h in dense_hits]
-        assert doc_id in retrieved_ids or getattr(doc_item, "doc_id", None) in retrieved_ids
+        assert target_id in retrieved_ids
 
         # 2. Real BM25 self-retrieval
         bm25_hits = bm25.search(query=content[:200], k=5, roles=roles)
         assert len(bm25_hits) >= 1
         retrieved_bm25_ids = [h.chunk_id for h in bm25_hits] + [h.doc_id for h in bm25_hits]
-        assert doc_id in retrieved_bm25_ids or getattr(doc_item, "doc_id", None) in retrieved_bm25_ids
+        assert target_id in retrieved_bm25_ids
 
         # 3. Real Hybrid self-retrieval
         hybrid_hits = hybrid.search(query=content[:200], k=5, roles=roles)
         assert len(hybrid_hits) >= 1
         retrieved_hybrid_ids = [h.chunk_id for h in hybrid_hits] + [h.doc_id for h in hybrid_hits]
-        assert doc_id in retrieved_hybrid_ids or getattr(doc_item, "doc_id", None) in retrieved_hybrid_ids
+        assert target_id in retrieved_hybrid_ids
+
 
 
 

@@ -168,7 +168,14 @@ class QdrantVectorStore:
         self.url = url or settings.qdrant_url
         self.collection_name = collection_name
         self.vector_size = vector_size
-        self.client = QdrantClient(url=self.url)
+        
+        if self.url.startswith("http://") or self.url.startswith("https://"):
+            self.client = QdrantClient(url=self.url)
+        elif self.url == ":memory:":
+            self.client = QdrantClient(location=":memory:")
+        else:
+            self.client = QdrantClient(path=self.url)
+
 
         # Initialize collection if not exists
         try:
@@ -180,6 +187,7 @@ class QdrantVectorStore:
                 )
         except Exception as err:
             raise RuntimeError(f"Failed to connect to Qdrant at '{self.url}': {err}") from err
+
 
     @property
     def documents(self) -> dict[str, Document]:
@@ -236,8 +244,11 @@ class QdrantVectorStore:
 
     def get_document(self, doc_id: str) -> Document | None:
         """Retrieve point by document/chunk ID."""
+        import uuid
+        point_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, doc_id))
         docs = self.documents
-        return docs.get(doc_id)
+        return docs.get(point_id) or docs.get(doc_id)
+
 
     def delete_document(self, doc_id: str) -> bool:
         """Delete point from Qdrant by document/chunk ID."""
@@ -278,12 +289,22 @@ class QdrantVectorStore:
         else:
             qdrant_filter = Filter(must=conditions) if conditions else None
 
-        search_results = self.client.search(
-            collection_name=self.collection_name,
-            query_vector=query_embedding,
-            limit=top_k,
-            query_filter=qdrant_filter,
-        )
+        if hasattr(self.client, "query_points"):
+            query_res = self.client.query_points(
+                collection_name=self.collection_name,
+                query=query_embedding,
+                limit=top_k,
+                query_filter=qdrant_filter,
+            )
+            search_results = query_res.points
+        else:
+            search_results = self.client.search(
+                collection_name=self.collection_name,
+                query_vector=query_embedding,
+                limit=top_k,
+                query_filter=qdrant_filter,
+            )
+
 
         results: list[SearchResult] = []
         for hit in search_results:
