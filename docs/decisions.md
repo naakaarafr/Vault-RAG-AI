@@ -4,7 +4,7 @@
 
 * **Date**: 2026-09-20
 * **Status**: Accepted
-* **Context**: Vault requires local LLM access via an OpenAI-compatible API endpoint (`LLM_BASE_URL` pointing to Ollama or vLLM) with zero hosted API dependencies.
+* **Context**: Vault operates local-first via an OpenAI-compatible API endpoint (`LLM_BASE_URL` pointing to Ollama or vLLM) with no external API dependencies by default and an optional opt-in OpenAI fallback model.
 * **Decision**: Implement a thin, explicit wrapper using `httpx.AsyncClient` / `httpx.Client` directly around the standard `/v1/chat/completions` REST specification in `src/vault/llm.py` instead of importing heavy SDKs or framework wrappers (LangChain / LlamaIndex / `openai`).
 
 ## ADR-002: Configuration Management via `pydantic-settings`
@@ -18,7 +18,7 @@
 
 * **Date**: 2026-09-20
 * **Status**: Accepted
-* **Context**: Enterprise local RAG needs high-speed, zero-external-network vector persistence, exact or approximate similarity search, metadata filtering, and JSON/SQLite array storage.
+* **Context**: Enterprise local RAG needs high-speed local-first vector persistence, exact or approximate similarity search, metadata filtering, and JSON/SQLite array storage.
 * **Decision**: Implement an explicit vector index engine in `src/vault/vector_store.py` with normalized vector dot product (cosine similarity), metadata query filtering, and JSON/disk snapshot persistence.
 
 ## ADR-004: Sliding-Window Character Chunker with Overlap Protection
@@ -61,7 +61,7 @@
 * **Date**: 2026-09-20
 * **Status**: Accepted
 * **Context**: Local LLM runtimes (vLLM, Ollama `/v1`) conform to the OpenAI REST specification.
-* **Decision**: Implement `src/vault/llm/client.py` using `openai.OpenAI` and `openai.AsyncOpenAI` with `base_url` pointing to `LLM_BASE_URL`.
+* **Decision**: Implement `src/vault/llm/client.py` using `openai.OpenAI` and `openai.AsyncOpenAI` with `base_url` pointing to `LLM_BASE_URL`. Includes an opt-in fallback to OpenAI models (disabled by default via `enable_openai_fallback=False`) when primary local LLM requests fail.
 
 ## ADR-010: Structure-Aware Two-Stage Document Chunking Strategy
 

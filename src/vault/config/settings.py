@@ -48,7 +48,7 @@ class Settings(BaseSettings):
         description="Base URL for OpenAI API fallback endpoint",
     )
     enable_openai_fallback: bool = Field(
-        default=True,
+        default=False,
         description="Whether to fall back to OpenAI model if primary local LLM call fails",
     )
 

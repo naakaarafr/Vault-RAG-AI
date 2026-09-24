@@ -1,9 +1,9 @@
 # Technical Architecture & Empirical Evaluation Write-up
 
 ## 1. Executive Summary & Project Goal
-Vault was designed to serve as a enterprise-grade, fully self-hosted Retrieval-Augmented Generation (RAG) platform with a guardrailed agent. In private-AI environments, organizations cannot risk sending confidential IP, compliance records, or user PII over external networks to hosted LLM or embedding APIs.
+Vault was designed to serve as an enterprise-grade, local-first Retrieval-Augmented Generation (RAG) platform with a guardrailed agent. In private-AI environments, organizations prioritize keeping confidential IP, compliance records, and user PII local.
 
-Vault guarantees zero runtime external API calls by running embedding generation (`BAAI/bge-small-en-v1.5`), dense vector retrieval, BM25 keyword matching, Cross-Encoder reranking (`BAAI/bge-reranker-base`), and LLM chat completions locally via an OpenAI-compatible runtime (Ollama or vLLM).
+Vault operates with no external runtime API calls by default by running embedding generation (`BAAI/bge-small-en-v1.5`), dense vector retrieval, BM25 keyword matching, Cross-Encoder reranking (`BAAI/bge-reranker-base`), and LLM chat completions locally via an OpenAI-compatible runtime (Ollama or vLLM). For high-availability deployments, an opt-in OpenAI fallback model can be explicitly enabled.
 
 ---
 

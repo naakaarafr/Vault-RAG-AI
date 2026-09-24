@@ -13,7 +13,7 @@ def test_default_settings() -> None:
     assert settings.llm_max_retries > 0
     assert isinstance(settings.enable_input_guardrails, bool)
     assert settings.openai_model == "gpt-4o-mini"
-    assert settings.enable_openai_fallback is True
+    assert settings.enable_openai_fallback is False
 
 
 

@@ -1,6 +1,6 @@
 # Vault: Self-Hosted Enterprise Guardrailed RAG Stack
 
-Vault is a fully self-hosted, enterprise-grade Retrieval-Augmented Generation (RAG) platform designed for private AI deployments with zero external runtime API dependencies. Built with Python 3.11, explicit modular architecture (no LangChain/LlamaIndex), role-based access control (RBAC), multi-stage hybrid retrieval with Cross-Encoder reranking, and hand-written agent guardrails (PII redaction, prompt injection defense, SQL AST safety via `sqlglot`, and low-confidence refusals), Vault guarantees that proprietary data remains 100% local and isolated.
+Vault is an enterprise-grade Retrieval-Augmented Generation (RAG) platform built with a local-first architecture for private AI deployments. Built with Python 3.11, explicit modular architecture (no LangChain/LlamaIndex), role-based access control (RBAC), multi-stage hybrid retrieval with Cross-Encoder reranking, and hand-written agent guardrails (PII redaction, prompt injection defense, SQL AST safety via `sqlglot`, and low-confidence refusals), Vault operates with no external calls by default and provides an opt-in OpenAI fallback model for high availability.
 
 ## Architecture
 
@@ -32,7 +32,7 @@ graph TD
     RRF --> Reranker
     Reranker -->|Top-K Hits| P4
     P4 -->|Context| LLM[Local Ollama / vLLM Server]
-    LLM -->|On Failure| Fallback[OpenAI Fallback Model: gpt-4o-mini]
+    LLM -->|On Failure (Opt-in)| Fallback[OpenAI Fallback Model: gpt-4o-mini]
     LLM -->|Response| P5
     Fallback -->|Response| P5
     P5 --> P2
@@ -57,13 +57,13 @@ curl http://localhost:8000/health
 
 ---
 
-## Fully-Local & High-Availability Model Support
+## Local-First & High-Availability Model Support
 
-- **Primary Local LLM**: All embeddings (`BAAI/bge-small-en-v1.5`) and default LLM chat completions run locally against Ollama or vLLM endpoints.
-- **OpenAI Model Fallback**: If the local LLM server is offline or fails to respond, `LLMClient` seamlessly falls back to an OpenAI model (e.g., `gpt-4o-mini`) when `ENABLE_OPENAI_FALLBACK=true` and `OPENAI_API_KEY` is provided.
-- **Privacy & Resilience**: Ensures system uptime and high availability without compromising guardrail checks.
+- **Local-First Default**: All embeddings (`BAAI/bge-small-en-v1.5`) and LLM chat completions run locally against Ollama or vLLM endpoints with zero external calls by default.
+- **Opt-in OpenAI Fallback**: If the local LLM server is offline or fails to respond, `LLMClient` can seamlessly fall back to an OpenAI model (e.g., `gpt-4o-mini`). Fallback is disabled (`False`) by default and only activates when `ENABLE_OPENAI_FALLBACK=true` and `OPENAI_API_KEY` is provided.
+- **Privacy & Resilience**: Guarantees data privacy by keeping operations local by default while offering high-availability resilience when enabled.
 
-### OpenAI Fallback Configuration
+### OpenAI Fallback Configuration (Opt-in)
 
 Set the following environment variables in `.env`:
 

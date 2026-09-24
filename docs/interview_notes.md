@@ -67,8 +67,8 @@ Local LLM inference engines (vLLM, Ollama) standardise on the OpenAI REST API fo
 
 #### 3 Hard Interviewer Questions & Strong Answers
 
-1. **Question**: *"How does your client guarantee zero external network requests?"*
-   - **Answer**: *"The `base_url` parameter is explicitly forced to local network endpoints (`http://localhost:11434/v1` or local cluster IPs). Dummy API keys (`local-vault`) are provided to satisfy SDK instantiation without hitting remote servers."*
+1. **Question**: *"How does your client ensure a local-first design while supporting external fallbacks?"*
+   - **Answer**: *"By default, `enable_openai_fallback` is set to `False` and `base_url` targets local network endpoints (`http://localhost:11434/v1`). Zero external network requests are made out-of-the-box. External API calls to OpenAI only occur if an operator explicitly opts in by setting `ENABLE_OPENAI_FALLBACK=true` and providing an `OPENAI_API_KEY`."*
 
 2. **Question**: *"How do you handle transient local model server timeouts or cold-start loading delays?"*
    - **Answer**: *"The client configures explicit `timeout` limits and `max_retries` with exponential backoff on connection errors within the underlying `httpx` transport layer."*
